@@ -3,11 +3,21 @@ provider:
   name: aws
   runtime: go1.x
   region: us-east-1
-package:
-  exclude:
-    - ./**
-  include:
-    - ./bin/**
 functions:
   hello:
     handler: bin/hello
+  api:
+    handler: bin/api
+    events:
+      - http:
+          path: /products
+          method: get
+      - http:
+          path: /categories
+          method: get
+package:
+  patterns:
+    # we exclude everything
+    - '!*/**'
+    # except: everything that is inside bin directory
+    - 'bin/*'

@@ -11,7 +11,7 @@ import (
 )
 
 type Server struct {
-	app  *fiber.App
+	App  *fiber.App
 	port string
 }
 
@@ -21,12 +21,13 @@ type Config struct {
 
 func New(config Config) (*Server, error) {
 	fiberApp := fiber.New()
-	s := &Server{app: fiberApp, port: config.Port}
 
 	fiberApp.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
+		AllowOrigins: "http://localhost:5173/, https://master.d14f8mlnk4lkw2.amplifyapp.com/",
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
+
+	s := &Server{App: fiberApp, port: config.Port}
 
 	fiberApp.Get("/products", s.Products())
 	fiberApp.Get("/categories", s.Categories())
@@ -41,7 +42,7 @@ func (s *Server) Run() error {
 		port = s.port
 	}
 
-	return s.app.Listen(":" + port)
+	return s.App.Listen(":" + port)
 }
 
 func (s *Server) Categories() fiber.Handler {
