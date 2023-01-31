@@ -3,26 +3,33 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"pratbacknd/internal/server"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	fiberadapter "github.com/awslabs/aws-lambda-go-api-proxy/fiber"
+	chiadapter "github.com/awslabs/aws-lambda-go-api-proxy/chi"
 )
 
-var lambdaHandler *fiberadapter.FiberLambda
+// var lambdaHandler *chiadapter.
+var chiLambda *chiadapter.ChiLambda
 
 func init() {
-	server, err := server.New(server.Config{Port: "5000"})
+	ao, found := os.LookupEnv("ALLOWED_ORIGIN")
+	if !found {
+		log.Fatalf("Could not find ALLOWED_ORIGIN")
+	}
+
+	server, err := server.New(server.Config{Port: "5000", AllowedOrigins: ao})
 	if err != nil {
 		log.Fatalf("Could not create server : %s", err)
 	}
 
-	lambdaHandler = fiberadapter.New(server.App)
+	chiLambda = chiadapter.New(server.Router)
 }
 
 func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	return lambdaHandler.ProxyWithContext(ctx, req)
+	return chiLambda.ProxyWithContext(ctx, req)
 }
 
 func main() {

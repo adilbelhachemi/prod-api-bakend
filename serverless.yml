@@ -1,5 +1,7 @@
 service: myTestService
 provider:
+  environment:
+    ALLOWED_ORIGIN: ${param:allowedOrigin}
   name: aws
   runtime: go1.x
   region: us-east-1
