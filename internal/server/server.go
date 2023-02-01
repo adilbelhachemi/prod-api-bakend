@@ -1,11 +1,16 @@
 package server
 
 import (
+	"errors"
+	"log"
 	"net/http"
 	"pratbacknd/internal/category"
 	"pratbacknd/internal/product"
 
 	"github.com/Rhymond/go-money"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -49,6 +54,40 @@ func (s *Server) Categories(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Products(w http.ResponseWriter, r *http.Request) {
+
+	awsSession, err := session.NewSession()
+	if err != nil {
+		log.Println(err)
+		s.errorJSON(w, errors.New("internal serveur error"), http.StatusInternalServerError)
+		return
+	}
+
+	dynamodbClient := dynamodb.New(awsSession)
+
+	tableName := "ecommerce-dev"
+	item := make(map[string]*dynamodb.AttributeValue)
+	item["PK"] = &dynamodb.AttributeValue{
+		S: aws.String("test"),
+	}
+	item["SK"] = &dynamodb.AttributeValue{
+		S: aws.String("test2"),
+	}
+	item["foo"] = &dynamodb.AttributeValue{
+		S: aws.String("bar"),
+	}
+
+	output, err := dynamodbClient.PutItem(&dynamodb.PutItemInput{
+		TableName: &tableName,
+		Item:      item,
+	})
+	if err != nil {
+		log.Println(err)
+		s.errorJSON(w, errors.New("internal serveur error - db query error"), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println(output)
+
 	products := []product.Product{
 		{
 			ID:               "42",

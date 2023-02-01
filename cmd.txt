@@ -1,4 +1,0 @@
-serverless deploy --aws-profile adil
-
-deploy to e a specific env using staging flag:
-    serverless deploy --aws-profile adil --stage dev

@@ -5,6 +5,19 @@ provider:
   name: aws
   runtime: go1.x
   region: us-east-1
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            - 'dynamodb:PutItem'
+          Resource:
+            Fn::Join:
+              - ':'
+              - - 'arn:aws:dynamodb'
+                - Ref: 'AWS::Region'
+                - Ref: 'AWS::AccountId'
+                - table/ecommerce-${param:stage}
 functions:
   hello:
     handler: bin/hello
