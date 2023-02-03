@@ -6,101 +6,102 @@ import (
 	"net/http"
 	"pratbacknd/internal/category"
 	"pratbacknd/internal/product"
+	"pratbacknd/internal/storage"
+	"pratbacknd/internal/utils"
 
-	"github.com/Rhymond/go-money"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/go-chi/chi/v5"
 )
 
 type Server struct {
-	Router         *chi.Mux
-	port           string
+	Mux            *chi.Mux
 	allowedOrigins string
+	storage        storage.Storage
+	uuidGen        utils.UUIDGenerator
 }
 
 type Config struct {
-	Port           string
 	AllowedOrigins string
+	Storage        storage.Storage
+	UUIDGen        utils.UUIDGenerator
 }
 
 func New(config Config) (*Server, error) {
-	r := chi.NewRouter()
-	s := &Server{Router: r, port: config.Port, allowedOrigins: config.AllowedOrigins}
+	m := chi.NewRouter()
+	s := &Server{Mux: m, storage: config.Storage, allowedOrigins: config.AllowedOrigins, uuidGen: config.UUIDGen}
 
-	r.Use(s.enableCORS)
+	m.Use(s.enableCORS)
 
-	r.Get("/products", s.Products)
-	r.Get("/categories", s.Categories)
+	m.Get("/products", s.Products)
+	m.Post("/admin/products", s.CreateProduct)
+
+	m.Get("/categories", s.Categories)
+	m.Post("/admin/categories", s.CreateCategory)
 
 	return s, nil
 }
 
-func (s *Server) Categories(w http.ResponseWriter, r *http.Request) {
-	categories := []category.Category{
-		{
-			ID:          "11",
-			Name:        "Test",
-			Description: "this the first category",
-		},
-		{
-			ID:          "12",
-			Name:        "Test 2",
-			Description: "This is the 2nd categoty",
-		},
+func (s *Server) Products(w http.ResponseWriter, r *http.Request) {
+	products, err := s.storage.Products()
+	if err != nil {
+		log.Printf("error - fetching products: %s \n", err)
+		s.errorJSON(w, errors.New("error fetching products"), http.StatusInternalServerError)
+		return
 	}
+
+	s.writeJSON(w, http.StatusOK, products)
+}
+
+func (s *Server) CreateProduct(w http.ResponseWriter, r *http.Request) {
+	var p product.Product
+	err := s.readJSON(w, r, &p)
+
+	if err != nil {
+		log.Printf("error - building json: %s \n", err)
+		s.errorJSON(w, errors.New("error reading product"), http.StatusBadRequest)
+		return
+	}
+
+	p.ID = s.uuidGen.Generate()
+
+	err = s.storage.CreateProduct(p)
+	if err != nil {
+		log.Printf("error - storing product: %s \n", err)
+		s.errorJSON(w, errors.New("error persisting product"), http.StatusInternalServerError)
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, p)
+}
+
+func (s *Server) Categories(w http.ResponseWriter, r *http.Request) {
+	categories, err := s.storage.Categories()
+	if err != nil {
+		log.Printf("error - fetching categories: %s \n", err)
+		s.errorJSON(w, errors.New("error fetching categories"), http.StatusInternalServerError)
+		return
+	}
+
 	s.writeJSON(w, http.StatusOK, categories)
 }
 
-func (s *Server) Products(w http.ResponseWriter, r *http.Request) {
+func (s *Server) CreateCategory(w http.ResponseWriter, r *http.Request) {
+	var c category.Category
+	err := s.readJSON(w, r, &c)
 
-	awsSession, err := session.NewSession()
 	if err != nil {
-		log.Println(err)
-		s.errorJSON(w, errors.New("internal serveur error"), http.StatusInternalServerError)
+		log.Printf("error - building json: %s \n", err)
+		s.errorJSON(w, errors.New("error reading category"), http.StatusBadRequest)
 		return
 	}
 
-	dynamodbClient := dynamodb.New(awsSession)
+	c.ID = s.uuidGen.Generate()
 
-	tableName := "ecommerce-dev"
-	item := make(map[string]*dynamodb.AttributeValue)
-	item["PK"] = &dynamodb.AttributeValue{
-		S: aws.String("test"),
-	}
-	item["SK"] = &dynamodb.AttributeValue{
-		S: aws.String("test2"),
-	}
-	item["foo"] = &dynamodb.AttributeValue{
-		S: aws.String("bar"),
-	}
-
-	output, err := dynamodbClient.PutItem(&dynamodb.PutItemInput{
-		TableName: &tableName,
-		Item:      item,
-	})
+	err = s.storage.CreateCategory(c)
 	if err != nil {
-		log.Println(err)
-		s.errorJSON(w, errors.New("internal serveur error - db query error"), http.StatusInternalServerError)
+		log.Printf("error - storing category: %s \n", err)
+		s.errorJSON(w, errors.New("error persisting product"), http.StatusInternalServerError)
 		return
 	}
 
-	log.Println(output)
-
-	products := []product.Product{
-		{
-			ID:               "42",
-			Name:             "Test",
-			Description:      "This is my product",
-			PriceVATExcluded: money.New(100, "EUR"),
-			VAT:              money.New(200, "EUR")},
-		{
-			ID:               "33",
-			Name:             "Test 2",
-			Description:      "This is my 2nd product",
-			PriceVATExcluded: money.New(70, "EUR"),
-			VAT:              money.New(140, "EUR")},
-	}
-	s.writeJSON(w, http.StatusOK, products)
+	s.writeJSON(w, http.StatusOK, c)
 }

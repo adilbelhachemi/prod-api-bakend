@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"pratbacknd/internal/server"
+	"pratbacknd/internal/storage"
+	"pratbacknd/internal/utils"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -20,12 +22,17 @@ func init() {
 		log.Fatalf("Could not find ALLOWED_ORIGIN")
 	}
 
-	server, err := server.New(server.Config{Port: "5000", AllowedOrigins: ao})
+	storage, err := storage.NewDynamo("ecommerce-dev")
+	if err != nil {
+		log.Fatalf("Could not create storage interface")
+	}
+
+	server, err := server.New(server.Config{Storage: storage, AllowedOrigins: ao, UUIDGen: utils.UUIDV4{}})
 	if err != nil {
 		log.Fatalf("Could not create server : %s", err)
 	}
 
-	chiLambda = chiadapter.New(server.Router)
+	chiLambda = chiadapter.New(server.Mux)
 }
 
 func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
