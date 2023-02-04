@@ -132,3 +132,53 @@ func (d *Dynamo) getElementByPk(pkAttributeValue string) (*dynamodb.QueryOutput,
 
 	return out, nil
 }
+
+func (d *Dynamo) UpdateProduct(input UpdateProductInput) error {
+	p, err := d.getProductById(input.ProductId)
+	if err != nil {
+		return fmt.Errorf("error - to retrieve product: %w", err)
+	}
+
+	// key condition
+	keyCondition := make(map[string]*dynamodb.AttributeValue)
+	// PK
+	keyCondition[PartitionKeyAttributeName] = &dynamodb.AttributeValue{S: aws.String(pkProduct)}
+	// SK
+	keyCondition[SortkeyAttributeName] = &dynamodb.AttributeValue{S: aws.String(input.ProductId)}
+
+	// condition expression
+	condition := expression.Name("version").Equal(expression.Value(p.Version))
+
+	// update expression
+	update := expression.Set(expression.Name("name"), expression.Value(input.Name))
+	update.Set(expression.Name("version"), expression.Value(p.Version+1))
+	update.Set(expression.Name("image"), expression.Value(input.Image))
+	update.Set(expression.Name("shortDescription"), expression.Value(input.ShortDescription))
+	update.Set(expression.Name("priceVatExcluded"), expression.Value(input.PriceVATExcluded))
+	update.Set(expression.Name("vat"), expression.Value(input.VAT))
+	update.Set(expression.Name("totalPrice"), expression.Value(input.TotalPrice))
+
+	// build the expression with expression builder
+	builder := expression.NewBuilder().WithCondition(condition).WithUpdate(update)
+	expr, err := builder.Build()
+	if err != nil {
+		return fmt.Errorf("error - building the expression: %w", err)
+	}
+
+	// request UpdateItem
+	item := dynamodb.UpdateItemInput{
+		TableName:                 &d.tableName,
+		Key:                       keyCondition,
+		ConditionExpression:       expr.Condition(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		UpdateExpression:          expr.Update(),
+	}
+
+	_, err = d.client.UpdateItem(&item)
+	if err != nil {
+		return fmt.Errorf("error - run update item request: %w", err)
+	}
+
+	return nil
+}

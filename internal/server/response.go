@@ -28,9 +28,11 @@ func (s *Server) writeJSON(w http.ResponseWriter, status int, data interface{}, 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
-	_, err = w.Write(out)
-	if err != nil {
-		return err
+	if out != nil {
+		_, err = w.Write(out)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
