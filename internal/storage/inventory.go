@@ -3,7 +3,7 @@ package storage
 import (
 	"errors"
 	"fmt"
-	"pratbacknd/internal/product"
+	"pratbacknd/internal/types"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -61,7 +61,7 @@ func (d *Dynamo) UpdateInventory(productId string, delta int) error {
 	return nil
 }
 
-func (d *Dynamo) getProductById(productID string) (product.Product, error) {
+func (d *Dynamo) getProductById(productID string) (types.Product, error) {
 	getItemInput := dynamodb.GetItemInput{
 		ConsistentRead: aws.Bool(true),
 		Key: map[string]*dynamodb.AttributeValue{
@@ -77,14 +77,14 @@ func (d *Dynamo) getProductById(productID string) (product.Product, error) {
 
 	out, err := d.client.GetItem(&getItemInput)
 	if err != nil {
-		return product.Product{}, fmt.Errorf("error - geeting item: %w", err)
+		return types.Product{}, fmt.Errorf("error - geeting item: %w", err)
 	}
 
 	if len(out.Item) == 0 {
-		return product.Product{}, ErrorNotFound
+		return types.Product{}, ErrorNotFound
 	}
 
-	var p product.Product
+	var p types.Product
 	err = dynamodbattribute.UnmarshalMap(out.Item, &p)
 	if err != nil {
 		return p, fmt.Errorf("error - marchalling product: %s", err)

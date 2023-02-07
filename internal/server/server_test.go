@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"pratbacknd/internal/category"
-	"pratbacknd/internal/product"
 	"pratbacknd/internal/storage"
+	"pratbacknd/internal/types"
 	"pratbacknd/internal/utils"
 	"testing"
 
@@ -41,7 +40,7 @@ func Test_CreateProduct(t *testing.T) {
 	assert.NoError(t, err, "building a server should not return an error")
 
 	recorder := httptest.NewRecorder()
-	inputProduct := product.Product{
+	inputProduct := types.Product{
 		Name:             "test",
 		ShortDescription: "short description",
 	}
@@ -56,7 +55,7 @@ func Test_CreateProduct(t *testing.T) {
 	// THEN
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
-	expectedPayload := `{"id":"ABC123","name":"test","image":"","shortDescription":"short description","description":"","priceVatExcluded":{"money":null,"display":""},"vat":{"money":null,"display":""},"totalPrice":{"money":null,"display":""}}`
+	expectedPayload := `{"id":"ABC123","name":"test","image":"","shortDescription":"short description","description":"","priceVatExcluded":{"money":null,"display":""},"vat":{"money":null,"display":""},"totalPrice":{"money":null,"display":""},"stock":0,"reserved":0,"version":0}`
 	assert.Equal(
 		t,
 		expectedPayload,
@@ -90,7 +89,7 @@ func Test_CreateCategory(t *testing.T) {
 	assert.NoError(t, err, "building a server should not return an error")
 
 	recorder := httptest.NewRecorder()
-	inputCategory := category.Category{
+	inputCategory := types.Category{
 		Name:        "test category",
 		Description: "category description",
 	}
@@ -105,7 +104,7 @@ func Test_CreateCategory(t *testing.T) {
 	// THEN
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
-	expectedPayload, err := json.Marshal(category.Category{
+	expectedPayload, err := json.Marshal(types.Category{
 		ID:          "ABC123",
 		Name:        inputCategory.Name,
 		Description: inputCategory.Description,
@@ -125,7 +124,7 @@ func TestServer_Categories(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockedStorage := storage.NewMockStorage(ctrl)
-	mockedResp := []category.Category{
+	mockedResp := []types.Category{
 		{
 			ID:          "11",
 			Name:        "Test",
@@ -155,5 +154,49 @@ func TestServer_Categories(t *testing.T) {
 	expectedBody, err := json.Marshal(mockedResp)
 	assert.NoError(t, err, "no error should happen when marshalling the response")
 	assert.Equal(t, expectedBody, recorder.Body.Bytes())
+}
 
+func TestServer_currentUser(t *testing.T) {
+	// Given
+	userId := "adil"
+	password := "password"
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockedStorage := storage.NewMockStorage(ctrl)
+	mockedResp := types.Cart{
+		ID:           "adil",
+		CurrencyCode: "EUR",
+		Items: []types.Item{
+			{ID: "123",
+				ShortDescription: "product 1",
+				Quantity:         2,
+				UnitPriceVATExc:  nil,
+				VAT:              nil,
+				UnitPriceVATInc:  nil,
+			},
+		},
+	}
+
+	mockedStorage.EXPECT().GetCart(userId).Return(mockedResp, nil)
+
+	// server
+	testServer, err := New(Config{
+		AllowedOrigins: "*",
+		Storage:        mockedStorage,
+		UUIDGen:        nil,
+	})
+	assert.NoError(t, err, "building a server should not return an error")
+
+	recorder := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/me/cart", nil)
+	req.SetBasicAuth(username, password)
+	assert.NoError(t, err, "no error should when building a request")
+
+	// When
+	testServer.Mux.ServeHTTP(recorder, req)
+
+	// Then
+	assert.Equal(t, http.StatusOK, recorder.Code)
 }

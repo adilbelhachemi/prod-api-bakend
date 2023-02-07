@@ -5,8 +5,7 @@
 package storage
 
 import (
-	category "pratbacknd/internal/category"
-	product "pratbacknd/internal/product"
+	types "pratbacknd/internal/types"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -36,10 +35,10 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 }
 
 // Categories mocks base method.
-func (m *MockStorage) Categories() ([]category.Category, error) {
+func (m *MockStorage) Categories() ([]types.Category, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Categories")
-	ret0, _ := ret[0].([]category.Category)
+	ret0, _ := ret[0].([]types.Category)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -50,8 +49,22 @@ func (mr *MockStorageMockRecorder) Categories() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Categories", reflect.TypeOf((*MockStorage)(nil).Categories))
 }
 
+// CreateCart mocks base method.
+func (m *MockStorage) CreateCart(cart types.Cart, userId string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateCart", cart, userId)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateCart indicates an expected call of CreateCart.
+func (mr *MockStorageMockRecorder) CreateCart(cart, userId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCart", reflect.TypeOf((*MockStorage)(nil).CreateCart), cart, userId)
+}
+
 // CreateCategory mocks base method.
-func (m *MockStorage) CreateCategory(c category.Category) error {
+func (m *MockStorage) CreateCategory(c types.Category) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateCategory", c)
 	ret0, _ := ret[0].(error)
@@ -65,7 +78,7 @@ func (mr *MockStorageMockRecorder) CreateCategory(c interface{}) *gomock.Call {
 }
 
 // CreateProduct mocks base method.
-func (m *MockStorage) CreateProduct(p product.Product) error {
+func (m *MockStorage) CreateProduct(p types.Product) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateProduct", p)
 	ret0, _ := ret[0].(error)
@@ -78,11 +91,26 @@ func (mr *MockStorageMockRecorder) CreateProduct(p interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProduct", reflect.TypeOf((*MockStorage)(nil).CreateProduct), p)
 }
 
+// GetCart mocks base method.
+func (m *MockStorage) GetCart(userID string) (types.Cart, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCart", userID)
+	ret0, _ := ret[0].(types.Cart)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCart indicates an expected call of GetCart.
+func (mr *MockStorageMockRecorder) GetCart(userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCart", reflect.TypeOf((*MockStorage)(nil).GetCart), userID)
+}
+
 // Products mocks base method.
-func (m *MockStorage) Products() ([]product.Product, error) {
+func (m *MockStorage) Products() ([]types.Product, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Products")
-	ret0, _ := ret[0].([]product.Product)
+	ret0, _ := ret[0].([]types.Product)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

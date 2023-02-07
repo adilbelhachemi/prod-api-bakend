@@ -16,4 +16,7 @@ genmocks:
 	mockgen -source=internal/storage/storage.go -destination=internal/storage/mock.go -package=storage
 	mockgen -source=internal/utils/uuidgenerator.go -destination=internal/utils/uuidgeneratormock.go -package=utils
 
+test:
+	go test ./... -v 
+
 #--param="allowedOrigin=https://master.d14f8mlnk4lkw2.amplifyapp.com/"

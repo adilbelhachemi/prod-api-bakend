@@ -4,9 +4,8 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"pratbacknd/internal/category"
-	"pratbacknd/internal/product"
 	"pratbacknd/internal/storage"
+	"pratbacknd/internal/types"
 	"pratbacknd/internal/utils"
 
 	"github.com/go-chi/chi/v5"
@@ -40,6 +39,12 @@ func New(config Config) (*Server, error) {
 
 	m.Put("/admin/inventory", s.UpdateInventory)
 
+	m.Route("/me", func(mux chi.Router) {
+		mux.Use(s.Authenticate)
+		mux.Get("/cart", s.GetCartUser)
+		mux.Put("/cart", s.UpdateCartUser)
+	})
+
 	return s, nil
 }
 
@@ -55,7 +60,7 @@ func (s *Server) Products(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) CreateProduct(w http.ResponseWriter, r *http.Request) {
-	var p product.Product
+	var p types.Product
 	err := s.readJSON(w, r, &p)
 
 	if err != nil {
@@ -88,7 +93,7 @@ func (s *Server) Categories(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) CreateCategory(w http.ResponseWriter, r *http.Request) {
-	var c category.Category
+	var c types.Category
 	err := s.readJSON(w, r, &c)
 
 	if err != nil {
@@ -110,13 +115,13 @@ func (s *Server) CreateCategory(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateProductInput struct {
-	Name             string         `json:"name"`
-	Image            string         `json:"image"`
-	ShortDescription string         `json:"shortDescription"`
-	Description      string         `json:"description"`
-	PriceVATExcluded product.Amount `json:"priceVatExcluded"`
-	VAT              product.Amount `json:"vat"`
-	TotalPrice       product.Amount `json:"totalPrice"`
+	Name             string       `json:"name"`
+	Image            string       `json:"image"`
+	ShortDescription string       `json:"shortDescription"`
+	Description      string       `json:"description"`
+	PriceVATExcluded types.Amount `json:"priceVatExcluded"`
+	VAT              types.Amount `json:"vat"`
+	TotalPrice       types.Amount `json:"totalPrice"`
 }
 
 func (s *Server) UpdateProduct(w http.ResponseWriter, r *http.Request) {
@@ -154,4 +159,13 @@ func (s *Server) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.writeJSON(w, http.StatusOK, nil)
+}
+
+func (s *Server) currentUser(w http.ResponseWriter, r *http.Request) (types.User, error) {
+	user := r.Context().Value("user")
+	if user == nil {
+		return types.User{}, errors.New("no user found in the context")
+	}
+
+	return user.(types.User), nil
 }

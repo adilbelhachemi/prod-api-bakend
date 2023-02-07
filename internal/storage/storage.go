@@ -1,8 +1,7 @@
 package storage
 
 import (
-	"pratbacknd/internal/category"
-	"pratbacknd/internal/product"
+	"pratbacknd/internal/types"
 )
 
 type UpdateProductInput struct {
@@ -11,18 +10,21 @@ type UpdateProductInput struct {
 	Image            string
 	ShortDescription string
 	Description      string
-	PriceVATExcluded product.Amount
-	VAT              product.Amount
-	TotalPrice       product.Amount
+	PriceVATExcluded types.Amount
+	VAT              types.Amount
+	TotalPrice       types.Amount
 }
 
 type Storage interface {
-	Products() ([]product.Product, error)
-	CreateProduct(p product.Product) error
+	Products() ([]types.Product, error)
+	CreateProduct(p types.Product) error
 	UpdateProduct(input UpdateProductInput) error
 
-	Categories() ([]category.Category, error)
-	CreateCategory(c category.Category) error
+	Categories() ([]types.Category, error)
+	CreateCategory(c types.Category) error
 
 	UpdateInventory(productId string, delta int) error
+
+	CreateCart(cart types.Cart, userId string) error
+	GetCart(userID string) (types.Cart, error)
 }

@@ -1,4 +1,4 @@
-package product
+package types
 
 import "github.com/Rhymond/go-money"
 

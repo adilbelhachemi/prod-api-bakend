@@ -1,6 +1,15 @@
 package server
 
-import "net/http"
+import (
+	"context"
+	"net/http"
+	"pratbacknd/internal/types"
+)
+
+const (
+	username = "adil"
+	password = "password"
+)
 
 func (s *Server) enableCORS(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -14,5 +23,18 @@ func (s *Server) enableCORS(h http.Handler) http.Handler {
 		} else {
 			h.ServeHTTP(w, r)
 		}
+	})
+}
+
+func (s *Server) Authenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		un, pass, ok := r.BasicAuth()
+		if !ok || un != username || pass != password {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		ctx := context.WithValue(r.Context(), "user", types.User{ID: un})
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
