@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"pratbacknd/internal/types"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	uuid "github.com/satori/go.uuid"
 )
 
 const (
@@ -236,4 +238,148 @@ func (d *Dynamo) GetCart(userID string) (types.Cart, error) {
 	}
 
 	return c, nil
+}
+
+func (d *Dynamo) CreateOrUpdateCart(userID string, productID string, delta int) (types.Cart, error) {
+
+	cart, err := d.GetCart(userID)
+	if err != nil {
+		if errors.Is(err, ErrorNotFound) {
+			cart = types.Cart{}
+			err = d.CreateCart(cart, userID)
+			if err != nil {
+				return types.Cart{}, fmt.Errorf("error - creating new cart: %w", err)
+			}
+		}
+		return types.Cart{}, fmt.Errorf("error - retreiving the cart: %w", err)
+	}
+
+	// add remove the item from the cart
+	err = cart.UpsertItem(productID, delta)
+	if err != nil {
+		return types.Cart{}, fmt.Errorf("error - adding item tp the cart: %w", err)
+	}
+
+	productDB, err := d.getProductById(productID)
+	if err != nil {
+		return types.Cart{}, fmt.Errorf("error - getting the product of id %s: %w", productID, err)
+	}
+
+	// slice of actions
+	actions := make([]*dynamodb.TransactWriteItem, 0)
+
+	// update stock request
+	updateStockReq, err := d.buildUpdateStockRequest(productDB, delta)
+	if err != nil {
+		return types.Cart{}, fmt.Errorf("error - building the update stock request %w", err)
+	}
+	actions = append(actions, updateStockReq)
+
+	// update cart request
+	updateCartReq, err := d.buildUpdateCartRequest(cart, userID)
+	if err != nil {
+		return types.Cart{}, fmt.Errorf("error - building the update cart request %w", err)
+	}
+	actions = append(actions, updateCartReq)
+
+	// gourp into a transaction
+	_, err = d.client.TransactWriteItems(&dynamodb.TransactWriteItemsInput{
+		TransactItems:      actions,
+		ClientRequestToken: aws.String(string(uuid.NewV4().String())),
+	})
+	if err != nil {
+		return types.Cart{}, fmt.Errorf("error - running the transaction %w", err)
+	}
+
+	// execute the transaction
+
+	return types.Cart{}, nil
+}
+
+func (d Dynamo) buildUpdateStockRequest(p types.Product, delta int) (*dynamodb.TransactWriteItem, error) {
+
+	newStock := int(p.Stock) - delta
+	newReserved := int(p.Reserved) + delta
+
+	if newStock < 0 || newReserved < 0 {
+		return nil, fmt.Errorf("error - negative quantity is not allowed")
+	}
+
+	// key
+	primaryKey := map[string]*dynamodb.AttributeValue{
+		PartitionKeyAttributeName: {S: aws.String(pkProduct)},
+		SortkeyAttributeName:      {S: aws.String(p.ID)},
+	}
+
+	// condition (for optimistic locking)
+	condition := expression.Name("version").Equal(expression.Value(p.Version))
+
+	update := expression.Set(
+		expression.Name("stock"),
+		expression.Value(newStock),
+	).Set(
+		expression.Name("reserved"),
+		expression.Value(newReserved),
+	).Set(
+		expression.Name("version"),
+		expression.Value(p.Version+1),
+	)
+
+	builder := expression.NewBuilder().WithCondition(condition).WithUpdate(update)
+	expr, err := builder.Build()
+	if err != nil {
+		return nil, fmt.Errorf("error - building the expression %w", err)
+	}
+
+	updateStockRequest := &dynamodb.TransactWriteItem{
+		Update: &dynamodb.Update{
+			ConditionExpression:       expr.Condition(),
+			ExpressionAttributeNames:  expr.Names(),
+			ExpressionAttributeValues: expr.Values(),
+			Key:                       primaryKey,
+			TableName:                 &d.tableName,
+			UpdateExpression:          expr.Update(),
+		},
+	}
+
+	return updateStockRequest, nil
+}
+
+func (d Dynamo) buildUpdateCartRequest(cart types.Cart, userId string) (*dynamodb.TransactWriteItem, error) {
+
+	// key
+	primaryKey := map[string]*dynamodb.AttributeValue{
+		PartitionKeyAttributeName: {S: aws.String(pkCart)},
+		SortkeyAttributeName:      {S: aws.String(cart.ID)},
+	}
+
+	// condition (for optimistic locking)
+	condition := expression.Name("version").Equal(expression.Value(cart.Version))
+
+	update := expression.Set(
+		expression.Name("items"),
+		expression.Value(cart.Items),
+	).Set(
+		expression.Name("version"),
+		expression.Value(cart.Version+1),
+	)
+
+	builder := expression.NewBuilder().WithCondition(condition).WithUpdate(update)
+	expr, err := builder.Build()
+	if err != nil {
+		return nil, fmt.Errorf("error - building the expression %w", err)
+	}
+
+	updateCartRequest := &dynamodb.TransactWriteItem{
+		Update: &dynamodb.Update{
+			ConditionExpression:       expr.Condition(),
+			ExpressionAttributeNames:  expr.Names(),
+			ExpressionAttributeValues: expr.Values(),
+			Key:                       primaryKey,
+			TableName:                 &d.tableName,
+			UpdateExpression:          expr.Update(),
+		},
+	}
+
+	return updateCartRequest, nil
 }

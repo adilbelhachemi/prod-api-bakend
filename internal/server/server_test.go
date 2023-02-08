@@ -168,8 +168,9 @@ func TestServer_currentUser(t *testing.T) {
 	mockedResp := types.Cart{
 		ID:           "adil",
 		CurrencyCode: "EUR",
-		Items: []types.Item{
-			{ID: "123",
+		Items: map[string]types.Item{
+			"42": {
+				ID:               "123",
 				ShortDescription: "product 1",
 				Quantity:         2,
 				UnitPriceVATExc:  nil,
