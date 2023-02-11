@@ -17,6 +17,7 @@ type UpdateProductInput struct {
 
 type Storage interface {
 	Products() ([]types.Product, error)
+	GetProductById(productID string) (types.Product, error)
 	CreateProduct(p types.Product) error
 	UpdateProduct(input UpdateProductInput) error
 

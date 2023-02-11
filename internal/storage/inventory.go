@@ -11,10 +11,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 )
 
-var ErrorNotFound = errors.New("Item not found")
+var ErrorNotFound = errors.New("item not found")
 
 func (d *Dynamo) UpdateInventory(productId string, delta int) error {
-	p, err := d.getProductById(productId)
+	p, err := d.GetProductById(productId)
 	if err != nil {
 		return fmt.Errorf("error - to retrieve product: %w", err)
 	}
@@ -61,7 +61,7 @@ func (d *Dynamo) UpdateInventory(productId string, delta int) error {
 	return nil
 }
 
-func (d *Dynamo) getProductById(productID string) (types.Product, error) {
+func (d *Dynamo) GetProductById(productID string) (types.Product, error) {
 	getItemInput := dynamodb.GetItemInput{
 		ConsistentRead: aws.Bool(true),
 		Key: map[string]*dynamodb.AttributeValue{

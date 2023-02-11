@@ -7,19 +7,24 @@ import (
 )
 
 type Cart struct {
-	ID           string
-	CurrencyCode string
-	Items        map[string]Item
-	Version      uint
+	ID           string          `json:"id"`
+	CurrencyCode string          `json:"currencyCode"`
+	Items        map[string]Item `json:"items"`
+	Version      uint            `json:"version"`
 }
 
 type Item struct {
-	ID               string
-	ShortDescription string
-	Quantity         uint8
-	UnitPriceVATExc  *money.Money
-	VAT              *money.Money
-	UnitPriceVATInc  *money.Money
+	ID               string       `json:"id"`
+	ShortDescription string       `json:"shortDescription"`
+	Quantity         uint8        `json:"quantity"`
+	UnitPriceVATExc  *money.Money `json:"unitPriceVATExc"`
+	VAT              *money.Money `json:"vat"`
+	UnitPriceVATInc  *money.Money `json:"unitPriceVATInc"`
+}
+
+type UpdateUserCartInput struct {
+	ProductID string `json:"productId"`
+	Delta     int    `json:"delta"`
 }
 
 func (c Cart) TotalPriceVATInc() (*money.Money, error) {
@@ -36,6 +41,11 @@ func (c Cart) TotalPriceVATInc() (*money.Money, error) {
 }
 
 func (c *Cart) UpsertItem(productID string, delta int) error {
+
+	if c.Items == nil {
+		c.Items = make(map[string]Item)
+	}
+
 	item, found := c.Items[productID]
 	if !found {
 		// item is not in the cart, we have to add it

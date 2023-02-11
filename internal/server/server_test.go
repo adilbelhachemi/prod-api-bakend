@@ -156,7 +156,7 @@ func TestServer_Categories(t *testing.T) {
 	assert.Equal(t, expectedBody, recorder.Body.Bytes())
 }
 
-func TestServer_currentUser(t *testing.T) {
+func TestServer_UserCart(t *testing.T) {
 	// Given
 	userId := "adil"
 	password := "password"
@@ -179,6 +179,10 @@ func TestServer_currentUser(t *testing.T) {
 			},
 		},
 	}
+	t.Run("test get user cart", func(t *testing.T) {
+
+	})
+
 
 	mockedStorage.EXPECT().GetCart(userId).Return(mockedResp, nil)
 

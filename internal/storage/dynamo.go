@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 	"fmt"
+	"log"
 	"pratbacknd/internal/types"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -120,6 +121,7 @@ func (d *Dynamo) getElementByPkAndSk(pkAttributeValue, skAttributeValue string) 
 	if skAttributeValue != "" {
 		sortKeyCondition := expression.Key(SortkeyAttributeName).Equal(expression.Value(skAttributeValue))
 		keyCondition = keyCondition.And(sortKeyCondition)
+		log.Printf("--> key condition updated with sk: %s", skAttributeValue)
 	}
 
 	builder := expression.NewBuilder().WithKeyCondition(keyCondition)
@@ -144,7 +146,7 @@ func (d *Dynamo) getElementByPkAndSk(pkAttributeValue, skAttributeValue string) 
 }
 
 func (d *Dynamo) UpdateProduct(input UpdateProductInput) error {
-	p, err := d.getProductById(input.ProductId)
+	p, err := d.GetProductById(input.ProductId)
 	if err != nil {
 		return fmt.Errorf("error - to retrieve product: %w", err)
 	}
@@ -237,6 +239,8 @@ func (d *Dynamo) GetCart(userID string) (types.Cart, error) {
 		return types.Cart{}, fmt.Errorf("error - Unmarshalling cart: %w", err)
 	}
 
+	log.Printf("--fetched cart: %+v", c)
+
 	return c, nil
 }
 
@@ -245,13 +249,16 @@ func (d *Dynamo) CreateOrUpdateCart(userID string, productID string, delta int) 
 	cart, err := d.GetCart(userID)
 	if err != nil {
 		if errors.Is(err, ErrorNotFound) {
-			cart = types.Cart{}
+			cart = types.Cart{
+				Version: 1,
+			}
 			err = d.CreateCart(cart, userID)
 			if err != nil {
 				return types.Cart{}, fmt.Errorf("error - creating new cart: %w", err)
 			}
+		} else {
+			return types.Cart{}, fmt.Errorf("error - retreiving the cart: %w", err)
 		}
-		return types.Cart{}, fmt.Errorf("error - retreiving the cart: %w", err)
 	}
 
 	// add remove the item from the cart
@@ -259,41 +266,40 @@ func (d *Dynamo) CreateOrUpdateCart(userID string, productID string, delta int) 
 	if err != nil {
 		return types.Cart{}, fmt.Errorf("error - adding item tp the cart: %w", err)
 	}
+	log.Printf("---> cart found: %+v", cart)
 
-	productDB, err := d.getProductById(productID)
+	productDB, err := d.GetProductById(productID)
 	if err != nil {
 		return types.Cart{}, fmt.Errorf("error - getting the product of id %s: %w", productID, err)
 	}
 
-	// slice of actions
+	// slice of actions in the transaction
 	actions := make([]*dynamodb.TransactWriteItem, 0)
 
-	// update stock request
+	// update stock query
 	updateStockReq, err := d.buildUpdateStockRequest(productDB, delta)
 	if err != nil {
-		return types.Cart{}, fmt.Errorf("error - building the update stock request %w", err)
+		return types.Cart{}, fmt.Errorf("error - build the update stock request: %w", err)
 	}
 	actions = append(actions, updateStockReq)
 
-	// update cart request
+	// update cart query
 	updateCartReq, err := d.buildUpdateCartRequest(cart, userID)
 	if err != nil {
-		return types.Cart{}, fmt.Errorf("error - building the update cart request %w", err)
+		return types.Cart{}, fmt.Errorf("error - update cart request: %w", err)
 	}
 	actions = append(actions, updateCartReq)
 
-	// gourp into a transaction
+	// group that into a transaction & execute it
 	_, err = d.client.TransactWriteItems(&dynamodb.TransactWriteItemsInput{
 		TransactItems:      actions,
-		ClientRequestToken: aws.String(string(uuid.NewV4().String())),
+		ClientRequestToken: aws.String(uuid.NewV4().String()),
 	})
 	if err != nil {
-		return types.Cart{}, fmt.Errorf("error - running the transaction %w", err)
+		return types.Cart{}, fmt.Errorf("error - run the transaction: %w", err)
 	}
 
-	// execute the transaction
-
-	return types.Cart{}, nil
+	return cart, nil
 }
 
 func (d Dynamo) buildUpdateStockRequest(p types.Product, delta int) (*dynamodb.TransactWriteItem, error) {
@@ -302,7 +308,7 @@ func (d Dynamo) buildUpdateStockRequest(p types.Product, delta int) (*dynamodb.T
 	newReserved := int(p.Reserved) + delta
 
 	if newStock < 0 || newReserved < 0 {
-		return nil, fmt.Errorf("error - negative quantity is not allowed")
+		return nil, fmt.Errorf("error - negative quantity is not allowed, newStock: %d, newReserved: %d", newStock, newReserved)
 	}
 
 	// key
@@ -350,7 +356,7 @@ func (d Dynamo) buildUpdateCartRequest(cart types.Cart, userId string) (*dynamod
 	// key
 	primaryKey := map[string]*dynamodb.AttributeValue{
 		PartitionKeyAttributeName: {S: aws.String(pkCart)},
-		SortkeyAttributeName:      {S: aws.String(cart.ID)},
+		SortkeyAttributeName:      {S: aws.String(userId)},
 	}
 
 	// condition (for optimistic locking)

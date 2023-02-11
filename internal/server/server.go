@@ -31,6 +31,7 @@ func New(config Config) (*Server, error) {
 	m.Use(s.enableCORS)
 
 	m.Get("/products", s.Products)
+	m.Get("/products/{productId}", s.ProductByID)
 	m.Post("/admin/products", s.CreateProduct)
 	m.Put("/admin/product/{productId}", s.UpdateProduct)
 
@@ -168,4 +169,22 @@ func (s *Server) currentUser(w http.ResponseWriter, r *http.Request) (types.User
 	}
 
 	return user.(types.User), nil
+}
+
+func (s *Server) ProductByID(w http.ResponseWriter, r *http.Request) {
+	productId := chi.URLParam(r, "productId")
+	if productId == "" {
+		s.errorJSON(w, errors.New("error productId is mondatory"), http.StatusBadRequest)
+		return
+	}
+
+	p, err := s.storage.GetProductById(productId)
+
+	if err != nil {
+		log.Printf("error - getting the product: %s\n", err)
+		s.errorJSON(w, errors.New("error getting the product"), http.StatusInternalServerError)
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, p)
 }
