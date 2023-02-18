@@ -5,14 +5,14 @@ import (
 )
 
 type UpdateProductInput struct {
-	ProductId        string
-	Name             string
-	Image            string
-	ShortDescription string
-	Description      string
-	PriceVATExcluded types.Amount
-	VAT              types.Amount
-	TotalPrice       types.Amount
+	ProductId        string      `json:"productId"`
+	Name             string      `json:"name"`
+	Image            string      `json:"image"`
+	ShortDescription string      `json:"shortDescription"`
+	Description      string      `json:"description"`
+	PriceVATExcluded types.Money `json:"priceVATExcluded"`
+	VAT              types.Money `json:"vat"`
+	TotalPrice       types.Money `json:"totalPrice"`
 }
 
 type Storage interface {

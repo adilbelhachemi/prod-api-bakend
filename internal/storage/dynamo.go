@@ -162,13 +162,30 @@ func (d *Dynamo) UpdateProduct(input UpdateProductInput) error {
 	condition := expression.Name("version").Equal(expression.Value(p.Version))
 
 	// update expression
-	update := expression.Set(expression.Name("name"), expression.Value(input.Name))
-	update.Set(expression.Name("version"), expression.Value(p.Version+1))
-	update.Set(expression.Name("image"), expression.Value(input.Image))
-	update.Set(expression.Name("shortDescription"), expression.Value(input.ShortDescription))
-	update.Set(expression.Name("priceVatExcluded"), expression.Value(input.PriceVATExcluded))
-	update.Set(expression.Name("vat"), expression.Value(input.VAT))
-	update.Set(expression.Name("totalPrice"), expression.Value(input.TotalPrice))
+	update := expression.Set(expression.Name("version"), expression.Value(p.Version+1))
+
+	// update the non-nil values
+	if input.Name != "" {
+		update.Set(expression.Name("name"), expression.Value(input.Name))
+	}
+	if input.Image != "" {
+		update.Set(expression.Name("image"), expression.Value(input.Image))
+	}
+	if input.ShortDescription != "" {
+		update.Set(expression.Name("shortDescription"), expression.Value(input.ShortDescription))
+	}
+	if input.Description != "" {
+		update.Set(expression.Name("description"), expression.Value(input.Description))
+	}
+	if input.PriceVATExcluded != (types.Money{}) {
+		update.Set(expression.Name("priceVatExcluded"), expression.Value(input.PriceVATExcluded))
+	}
+	if input.VAT != (types.Money{}) {
+		update.Set(expression.Name("vat"), expression.Value(input.VAT))
+	}
+	if input.TotalPrice != (types.Money{}) {
+		update.Set(expression.Name("totalPrice"), expression.Value(input.TotalPrice))
+	}
 
 	// build the expression with expression builder
 	builder := expression.NewBuilder().WithCondition(condition).WithUpdate(update)
@@ -266,7 +283,6 @@ func (d *Dynamo) CreateOrUpdateCart(userID string, productID string, delta int) 
 	if err != nil {
 		return types.Cart{}, fmt.Errorf("error - adding item tp the cart: %w", err)
 	}
-	log.Printf("---> cart found: %+v", cart)
 
 	productDB, err := d.GetProductById(productID)
 	if err != nil {

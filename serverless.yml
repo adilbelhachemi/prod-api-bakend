@@ -2,6 +2,7 @@ service: myTestService
 provider:
   environment:
     ALLOWED_ORIGIN: ${param:allowedOrigin}
+    PARAMETER_STORE_NAME: /ecommerce/${param:stage}/secrets
   name: aws
   runtime: go1.x
   region: us-east-1
@@ -21,6 +22,27 @@ provider:
                 - Ref: 'AWS::Region'
                 - Ref: 'AWS::AccountId'
                 - table/ecommerce-${param:stage}
+        - Effect: 'Allow'
+          Action:
+            - 'ssm:DescribeParameters'
+            - 'ssm:GetParameter'
+          Resource:
+            Fn::Join:
+              - ':'
+              - - 'arn:aws:ssm'
+                - Ref: 'AWS::Region'
+                - Ref: 'AWS::AccountId'
+                - parameter/ecommerce/${param:stage}/secrets
+        - Effect: 'Allow'
+          Action:
+            - 'kms:Decrypt'
+          Resource:
+            Fn::Join:
+              - ':'
+              - - 'arn:aws:kms'
+                - Ref: 'AWS::Region'
+                - Ref: 'AWS::AccountId'
+                - key/${param:ssmEncryptionKeyID}
 functions:
   hello:
     handler: bin/hello
@@ -54,6 +76,16 @@ functions:
       - http:
           path: /me/cart
           method: put
+          cors:
+            origin: '*' # <-- Specify allowed origin
+            headers: # <-- Specify allowed headers
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
 package:
   patterns:
     # we exclude everything

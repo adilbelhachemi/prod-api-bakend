@@ -8,25 +8,34 @@ import (
 	"pratbacknd/internal/types"
 	"pratbacknd/internal/utils"
 
+	"firebase.google.com/go/auth"
 	"github.com/go-chi/chi/v5"
 )
 
 type Server struct {
-	Mux            *chi.Mux
-	allowedOrigins string
-	storage        storage.Storage
-	uuidGen        utils.UUIDGenerator
+	Mux                *chi.Mux
+	allowedOrigins     string
+	storage            storage.Storage
+	uuidGen            utils.UUIDGenerator
+	firebaseAuthClient *auth.Client
 }
 
 type Config struct {
-	AllowedOrigins string
-	Storage        storage.Storage
-	UUIDGen        utils.UUIDGenerator
+	AllowedOrigins     string
+	Storage            storage.Storage
+	UUIDGen            utils.UUIDGenerator
+	FirebaseAuthClient *auth.Client
 }
 
 func New(config Config) (*Server, error) {
 	m := chi.NewRouter()
-	s := &Server{Mux: m, storage: config.Storage, allowedOrigins: config.AllowedOrigins, uuidGen: config.UUIDGen}
+	s := &Server{
+		Mux:                m,
+		storage:            config.Storage,
+		allowedOrigins:     config.AllowedOrigins,
+		uuidGen:            config.UUIDGen,
+		firebaseAuthClient: config.FirebaseAuthClient,
+	}
 
 	m.Use(s.enableCORS)
 
@@ -41,7 +50,7 @@ func New(config Config) (*Server, error) {
 	m.Put("/admin/inventory", s.UpdateInventory)
 
 	m.Route("/me", func(mux chi.Router) {
-		mux.Use(s.Authenticate)
+		mux.Use(s.AuthenticateV2)
 		mux.Get("/cart", s.GetCartUser)
 		mux.Put("/cart", s.UpdateCartUser)
 	})
@@ -116,13 +125,13 @@ func (s *Server) CreateCategory(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateProductInput struct {
-	Name             string       `json:"name"`
-	Image            string       `json:"image"`
-	ShortDescription string       `json:"shortDescription"`
-	Description      string       `json:"description"`
-	PriceVATExcluded types.Amount `json:"priceVatExcluded"`
-	VAT              types.Amount `json:"vat"`
-	TotalPrice       types.Amount `json:"totalPrice"`
+	Name             string      `json:"name"`
+	Image            string      `json:"image"`
+	ShortDescription string      `json:"shortDescription"`
+	Description      string      `json:"description"`
+	PriceVATExcluded types.Money `json:"priceVatExcluded"`
+	VAT              types.Money `json:"vat"`
+	TotalPrice       types.Money `json:"totalPrice"`
 }
 
 func (s *Server) UpdateProduct(w http.ResponseWriter, r *http.Request) {

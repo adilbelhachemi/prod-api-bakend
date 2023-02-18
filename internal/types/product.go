@@ -1,6 +1,8 @@
 package types
 
-import "github.com/Rhymond/go-money"
+import (
+	"github.com/Rhymond/go-money"
+)
 
 type Product struct {
 	ID               string `json:"id"`
@@ -8,9 +10,9 @@ type Product struct {
 	Image            string `json:"image"`
 	ShortDescription string `json:"shortDescription"`
 	Description      string `json:"description"`
-	PriceVATExcluded Amount `json:"priceVatExcluded"`
-	VAT              Amount `json:"vat"`
-	TotalPrice       Amount `json:"totalPrice"`
+	PriceVATExcluded Money  `json:"priceVatExcluded"`
+	VAT              Money  `json:"vat"`
+	TotalPrice       Money  `json:"totalPrice"`
 	// inventory
 	Stock    uint `json:"stock"`
 	Reserved uint `json:"reserved"`

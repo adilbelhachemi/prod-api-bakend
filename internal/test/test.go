@@ -1,0 +1,19 @@
+package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+type Money struct {
+	Amount   int64  `json:"amount"`
+	Currency string `json:"currency"`
+	Display  string `json:"display"`
+}
+
+func main() {
+	bearerToken := "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImFlYjMxMjdiMjRjZTg2MDJjODEyNDUxZThmZTczZDU4MjkyMDg4N2MiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiQiBBZGlsIiwicGljdHVyZSI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL0FFZEZUcDdiSmt0MjgwWWphd1RESGRGWDk2S2JqUUhPZ0FVdHdqUUdHSm5MPXM5Ni1jIiwiaXNzIjoiaHR0cHM6Ly9zZWN1cmV0b2tlbi5nb29nbGUuY29tL2Vjb21tZXJjZS1jMTUzNiIsImF1ZCI6ImVjb21tZXJjZS1jMTUzNiIsImF1dGhfdGltZSI6MTY3NjczNDU5OCwidXNlcl9pZCI6IjRseUc4S2J0RWNNaUQ4a3NYYW80THhSYWZ3NDIiLCJzdWIiOiI0bHlHOEtidEVjTWlEOGtzWGFvNEx4UmFmdzQyIiwiaWF0Ij…YmFzZSI6eyJpZGVudGl0aWVzIjp7Imdvb2dsZS5jb20iOlsiMTA1NjExOTgwMzU4NTUyNzQwOTgzIl0sImVtYWlsIjpbImFkaWwuYmVsaEBnbWFpbC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJnb29nbGUuY29tIn19.SHvSFALrrQMU9qTtjRFHEG-Bt2ywWQl9PpKYDwEAXV2sf6LIdR9-nGP8oqMzgGHQcj_7NWVw4drov_tMzbqoREaUzDv9GNTzSxvv_Xcx181ZeMyOCdHotmkSsmlrFoqJNIevPAMR7zYsDr6IYV1_9zK7oYCsUDYy3vaGuIGJD8gPNRM3WJno-cvTPg6uxSK7WjVSbzyYSl8I5P4Z8uPTDci3s26vSXlQWLFOhfsPIIepS_4qOrf1lINr19zwDjS68f9Yj2n5EuObpXmvy7eaBgYC_gceUTtdPN3K3goqSmoH4jTjWbU9nBcBA-VbyNi7oF99ZtXv71aMQ1PoNpZhDQ"
+
+	splits := strings.Split(bearerToken, " ")
+	fmt.Println(splits[1])
+}

@@ -55,7 +55,7 @@ func Test_CreateProduct(t *testing.T) {
 	// THEN
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
-	expectedPayload := `{"id":"ABC123","name":"test","image":"","shortDescription":"short description","description":"","priceVatExcluded":{"money":null,"display":""},"vat":{"money":null,"display":""},"totalPrice":{"money":null,"display":""},"stock":0,"reserved":0,"version":0}`
+	expectedPayload := `{"id":"ABC123","name":"test","image":"","shortDescription":"short description","description":"","priceVatExcluded":{"amount":0,"currency":"","display":""},"vat":{"amount":0,"currency":"","display":""},"totalPrice":{"amount":0,"currency":"","display":""},"stock":0,"reserved":0,"version":0}`
 	assert.Equal(
 		t,
 		expectedPayload,
@@ -182,7 +182,6 @@ func TestServer_UserCart(t *testing.T) {
 	t.Run("test get user cart", func(t *testing.T) {
 
 	})
-
 
 	mockedStorage.EXPECT().GetCart(userId).Return(mockedResp, nil)
 

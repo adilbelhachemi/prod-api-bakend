@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"pratbacknd/internal/types"
+	"strings"
 )
 
 const (
@@ -35,6 +36,26 @@ func (s *Server) Authenticate(next http.Handler) http.Handler {
 			return
 		}
 		ctx := context.WithValue(r.Context(), "user", types.User{ID: un})
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (s *Server) AuthenticateV2(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		splits := strings.Split(authHeader, " ")
+		if len(splits) != 2 {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
+		token, err := s.firebaseAuthClient.VerifyIDToken(r.Context(), splits[1])
+		if err != nil {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "user", types.User{ID: token.UID})
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
